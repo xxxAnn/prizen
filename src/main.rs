@@ -21,7 +21,8 @@ pub trait Node {
 
 pub struct LinearNode {
     w: Vec<f64>,
-    b: f64
+    b: f64,
+    id: usize
 }
 
 impl Node for LinearNode {
@@ -73,6 +74,7 @@ fn sum(a: &Vec<Vec<f64>>) -> Vec<f64> {
     f.clone()
 }
 
+#[derive(Debug)]
 pub struct WB {
     // starts at layer 1
     w: Layer<Column<PreviousColumn<f64>>>,
@@ -92,17 +94,44 @@ impl WB {
         let mut total = 0;
         let mut n = 1;
         while n < k.column_lengths.len() {
-            total+=k.column_lengths[n]*k.column_lengths[n-1]
+            total+=k.column_lengths[n]*k.column_lengths[n-1];
+            n+=1;
         }
         let w_stuff = &v[0..total];
         let b_stuff = &v[total..];
         let mut my_b = Vec::new();
+        let mut my_w = Vec::new();
         let mut s = 0;
-        for l in k.column_lengths {
-            my_b.push(Vec::from(&b_stuff[s..l]));
-            s = l
+        let mut j: usize = 0;
+        let mut v = k.column_lengths[0];
+        for l in &k.column_lengths[1..] {
+            println!("l: {}", l);
+            my_b.push(Vec::from(&b_stuff[s..*l]));
+            my_w.push(Vec::from(&w_stuff[j..(v*l)]));
+            s = *l;
+            v = *l;
+            j = v*l;
         }
-        todo!()
+        // [[]]
+        let mut f_w = Vec::new();
+        let mut i = 1;
+        for sub_w in my_w {
+            println!("sub_w: {:?}", &sub_w);
+            let mut sub_f_w = Vec::new();
+            let mut s = 0;
+            for _ in 0..k.column_lengths[i] {
+                println!("sub_w l: {:?}", &(s..k.column_lengths[i-1]));
+                sub_f_w.push(Vec::from(&sub_w[s..s+k.column_lengths[i-1]]));
+                s += k.column_lengths[i-1];
+            }
+            i+=1;
+            f_w.push(sub_f_w);
+        }
+
+        WB {
+            w: f_w,
+            b: my_b
+        }
     }
 }
 
@@ -130,11 +159,15 @@ impl Model<'_, '_> {
     }
 }
 
-/*
-fn test() {
-    let f = |x: &Vec<f64>| x[0].powi(2)+x[1].powi(2);
+fn main() {
+    let my_wb = WB {
+        w: vec![vec![vec![4., 4.]]],
+        b: vec![vec![4.]]
+    };
+    dbg!(&my_wb);
+    dbg!(WB::unflatten(Key {
+        layer_count: 1usize,
+        column_lengths: vec![2, 1]
+    }, &my_wb.flatten()));
     
-    println!("{:?}", vec![0.3, 0.4].forward_diff(&f));
-    println!("{:?}", vec![0.3, 0.4].central_diff(&f));
 }
-*/
