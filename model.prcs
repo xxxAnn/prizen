@@ -1,0 +1,6 @@
+layer // output layer
+LinearNode 0 [0.001, 0.1]
+meta
+input 1
+loss mse
+exp {((22.5), (46.5), (61.1), (70)) | ((0.001), (0.002), (0.0025), (0.003))}
