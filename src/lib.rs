@@ -77,12 +77,11 @@ pub struct WB {
     // starts at layer 1
     w: Layer<Column<PreviousColumn<f64>>>,
     b: Layer<Column<f64>>,
-    wbfr: [usize; 5]
 }
-
+// [[[a; 1]; 1]; 1]
 pub struct Key {
     layer_count: usize, 
-    column_lengths: Vec<usize>, // column_lengths.len() == layer_count
+    column_lengths: Vec<usize>, // column_lengths.len() == layer_count+1 since the input layer isn't counted
 }
 
 impl WB {
@@ -90,6 +89,20 @@ impl WB {
         [self.w.concat().concat(), self.b.concat()].concat()
     }
     pub fn unflatten(k: Key, v: &[f64]) -> Self {
+        let mut total = 0;
+        let mut n = 1;
+        while n < k.column_lengths.len() {
+            total+=k.column_lengths[n]*k.column_lengths[n-1]
+        }
+        // supposedly v.len() * 2 = k.layer_count
+        let w_stuff = &v[0..total];
+        let b_stuff = &v[total..];
+        let mut my_b = Vec::new();
+        let mut s = 0;
+        for l in k.column_lengths {
+            my_b.push(Vec::from(&b_stuff[s..l]));
+            s = l
+        }
         todo!()
     }
 }
