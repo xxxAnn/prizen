@@ -94,7 +94,6 @@ impl WB {
         while n < k.column_lengths.len() {
             total+=k.column_lengths[n]*k.column_lengths[n-1]
         }
-        // supposedly v.len() * 2 = k.layer_count
         let w_stuff = &v[0..total];
         let b_stuff = &v[total..];
         let mut my_b = Vec::new();
