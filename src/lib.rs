@@ -67,7 +67,7 @@ impl Node for LinearNode {
     }
 
     fn weights(&self) -> Vec<f64> {
-        self.w
+        self.w.clone()
     }
 }
 
@@ -123,20 +123,26 @@ impl Model {
         prev
     }
     pub fn loss(&mut self, is: Vec<Var>, os: Vec<Var>) -> Var {
-        let f = self.cst;
+        let f = &self.cst;
 
         f(is.into_iter().map(|x| self.calc(x, )).collect(), os)
     }
     pub fn update_wb(&mut self, v: Vec<f64>) {
-        for el in self.layers.concat().iter_mut() {
-            v = el.take_b(v);
-        }
+        let mut z = v.clone();
+        for x in self.layers.iter_mut().rev() { for y in x {
+            z = y.take_b(z)
+        }}
+        for x in self.layers.iter_mut().rev() { for y in x {
+            z = y.take_w(z)
+        }}
     }
     pub fn get_wb(&self) -> Vec<f64> {
-
-        //let bs = self.layers.concat().iter().map(|z| z.bias()).collect::<Vec<f64>>();
-        //let ws = self.layers.iter().concat().iter().map(|x| x.weights()).collect::<Vec<Vec<f64>>>().concat();
-        //return [ws, bs].concat();
-        todo!()
+        let mut wres = Vec::new();
+        let mut bres = Vec::new();
+        for x in &self.layers { for y in x {
+            bres.push(y.bias());
+            wres.push(y.weights());
+        }}
+        [wres.concat(), bres].concat()
     }
 }
