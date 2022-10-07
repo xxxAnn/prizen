@@ -164,7 +164,7 @@ fn test() {
         alpha: 0.0001,
         cst: Box::new(mse)
     };
-    mdl.train(100000); // train 10,000 iterations
+    mdl.train(100000); // train 100,000 iterations
     let wbs = mdl.get_wb();
     println!("The Princess's Guess: {:?}x + {:?}", wbs[0], wbs[1]);
 }
