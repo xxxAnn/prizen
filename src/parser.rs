@@ -13,7 +13,7 @@ const AFFINE_F:  u8 = 0b00000010;
 // number_of_layers
 // (NEW_LAYER number_of_nodes (NEW_NODE node_type number_of_weights bias (weight)*number_of_weights)*number_of_nodes)*number_of_layers
 // META number_of_input_nodes cst_size cst alpha
-// EXP number_of_points ((value)*number_of_input_nodes)*number_of_points (value)*number_of_points)
+// EXP number_of_points ((value)*number_of_input_nodes)*number_of_points (value)*number_of_points
 // all vars are float: [u8; 4]
 // (x)*b means (x, x, x, ...) b times.
 
@@ -61,12 +61,21 @@ fn create_byte_vec<T: AsRef<Path>>(p: T) -> Vec<u8> {
         fnal.push(NEW_LAYER);
         fnal.append(&mut (layers.len() as f32).to_be_bytes().to_vec());
         for node in layer {
-            let first  = node.split_whitespace().next().unwrap();
+            fnal.push(NEW_NODE);
+            let n = node.replace("[", "").replace("]", "");
+            let els  = node.split_whitespace().collect::<Vec<&str>>();
+            let first = els[0];
             fnal.push(match first.to_lowercase().as_str() {
                 "linearnode" => LINEAR_F,
                 "affinenode" => AFFINE_F,
                 _ => panic!("Invalid node name {}", layer[0])
             });
+            let second = els[1].parse::<f32>().unwrap();
+            fnal.append(&mut second.to_be_bytes().to_vec());
+            let weights = &els[2..];
+            for x in weights {
+                //
+            }
         }
         
     }
