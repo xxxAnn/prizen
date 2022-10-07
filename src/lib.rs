@@ -1,5 +1,3 @@
-use finitediff::FiniteDiff;
-
 type Var = Vec<f64>;
 type SVar<'a> = &'a [f64];
 
@@ -17,9 +15,9 @@ pub trait Node {
     }
     // takes its own weights and biases from the ribbon
 
-    fn take_w(&mut self, v: Vec<f64>) -> Vec<f64>;
+    fn take_w(&mut self, v: Ribbon) -> Ribbon;
 
-    fn take_b(&mut self, v: Vec<f64>) -> Vec<f64>;
+    fn take_b(&mut self, v: Ribbon) -> Ribbon;
 
     fn bias(&self) -> f64;
 
@@ -49,7 +47,7 @@ impl Node for LinearNode {
     }
 
     fn take_b(&mut self, v: Vec<f64>) -> Vec<f64> {
-        self.b = v[v.len()];
+        self.b = v[v.len()-1];
         v[0..v.len()-1].into()
     }
     
@@ -77,7 +75,7 @@ impl Node for LinearNode {
 // ord_out: ordered outputs (in node order).
 pub struct Observation {
     ord_in: Vec<Var>,
-    ord_out: Vec<Var>
+    ord_out: Vec<f64>
 }
 
 pub struct Model {
@@ -85,54 +83,37 @@ pub struct Model {
     inputs: usize,
     layers: Vec<Vec<Box<dyn Node>>>,
     alpha: f64,
-    cst: Box<dyn Fn(Vec<Var>, Vec<Var>) -> Var>
+    cst: Box<dyn Fn(Vec<f64>, Vec<f64>) -> f64>
 }
 
-pub fn mse(a: Vec<Var>, b: Vec<Var>) -> Var {
+pub fn mse(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let x =(0..a.len()).map(|i| {
-        sqdf(&a[i], &b[i])
-    }).collect::<Vec<Var>>();
+        (a[i]-b[i]).powi(2)
+    }).collect::<Vec<f64>>();
 
-    let v = sum(&x);
-
-    v.into_iter().map(|z| z/x.len() as f64).collect()
-}
-
-fn sqdf(a: SVar, b: SVar) -> Var {
-    (0..a.len()).map(|i| {
-        (a[i] - b[i]).powi(2)
-    }).collect()
-}
-
-fn sum(a: &Vec<Vec<f64>>) -> Vec<f64> {
-    let f = &mut (a[0].clone());
-    for i in 1..f.len() {
-        for j in 0..a[i].len() {
-            f[j] += a[i][j];
-        }
-    }
-    f.clone()
+    x.iter().sum()
 }
 
 impl Model {
-    pub fn calc(&self, v: Vec<f64>) -> Var {
-        let mut prev = v;
+    // there is one output node.
+    pub fn calc(&self, v: &[f64]) -> f64 {
+        let mut prev = v.to_vec();
         for layer in self.layers.iter() {
             prev = (0..layer.len()).into_iter().map(|x| layer[x].get_value(&prev)).collect();
         }
-        prev
+        prev[0]
     }
-    pub fn loss(&mut self, is: Vec<Var>, os: Vec<Var>) -> Var {
+    pub fn loss(&self, is: &[Var], os: &[f64]) -> f64 {
         let f = &self.cst;
 
-        f(is.into_iter().map(|x| self.calc(x, )).collect(), os)
+        f(is.into_iter().map(|x| self.calc(&x)).collect(), os.to_vec())
     }
-    pub fn update_wb(&mut self, v: Vec<f64>) {
-        let mut z = v.clone();
-        for x in self.layers.iter_mut().rev() { for y in x {
+    pub fn update_wb(&mut self, v: &[f64]) {
+        let mut z = v.to_vec();
+        for x in self.layers.iter_mut().rev() { for y in x.iter_mut().rev() {
             z = y.take_b(z)
         }}
-        for x in self.layers.iter_mut().rev() { for y in x {
+        for x in self.layers.iter_mut().rev() { for y in x.iter_mut().rev() {
             z = y.take_w(z)
         }}
     }
@@ -145,4 +126,45 @@ impl Model {
         }}
         [wres.concat(), bres].concat()
     }
+    pub fn update_wbs(&mut self) {
+        let mut r = Vec::new();
+        let wbs = self.get_wb();
+        let h = 1e-12; // tolerance
+        for i in 0..wbs.len() {
+            let mut t = wbs.clone();
+            t[i] = t[i]+h;
+            self.update_wb(&t);
+            let a = self.loss(&self.obs.ord_in,& self.obs.ord_out);
+            t[i] = t[i]-h;
+            self.update_wb(&t);
+            let b = self.loss(&self.obs.ord_in,&self.obs.ord_out);
+            r.push(wbs[i]-(self.alpha*((a-b)/(2.*h))));
+        }
+        self.update_wb(&r);
+    }
+    pub fn train(&mut self, iter: usize) {
+        let mut n = 0;
+        while n < iter {
+            self.update_wbs();
+            n+=1;
+        }
+    }
+}
+
+#[test]
+fn test() {
+    let mut mdl = Model {
+        obs: Observation { ord_in: vec![vec![-57.4], vec![7.3], vec![20.], vec![38.], vec![78.]], ord_out: vec![4.1, 5.09, 5.44, 5.72, 6.39] },
+        inputs: 1,
+        layers: vec![vec![Box::new(LinearNode {
+            w: vec![0.001],
+            b: 0.,
+            needed: 1
+        })]],
+        alpha: 0.0001,
+        cst: Box::new(mse)
+    };
+    mdl.train(100000); // train 10,000 iterations
+    let wbs = mdl.get_wb();
+    println!("The Princess's Guess: {:?}x + {:?}", wbs[0], wbs[1]);
 }
