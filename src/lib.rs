@@ -3,6 +3,8 @@ type SVar<'a> = &'a [f64];
 
 type Ribbon = Vec<f64>;
 
+pub mod parser;
+
 // Represents any ANN node.
 pub trait Node {
     fn get_value(&self, ord_vals: SVar) -> f64 {
