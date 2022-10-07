@@ -39,6 +39,45 @@ pub struct LinearNode {
 
 impl Node for LinearNode {
     fn f(&self, x: f64) -> f64 {
+        x-self.bias()
+    }
+
+    fn needed(&self) -> usize {
+        self.needed
+    }
+
+    fn take_b(&mut self, v: Vec<f64>) -> Vec<f64> {
+        self.b = v[v.len()-1];
+        v[0..v.len()-1].into()
+    }
+    
+    fn take_w(&mut self, v: Vec<f64>) -> Vec<f64> {
+        self.w = v[v.len()-self.needed()..v.len()].into();
+        v[0..v.len()-self.needed()].into()
+    }
+    
+    fn bias(&self) -> f64 {
+        self.b
+    }
+
+    fn weight(&self, i: usize) -> f64 {
+        self.w[i]
+    }
+
+    fn weights(&self) -> Vec<f64> {
+        self.w.clone()
+    }
+}
+
+#[derive(Clone)]
+pub struct AffineNode {
+    w: Vec<f64>,
+    b: f64,
+    needed: usize // number of weights needed
+}
+
+impl Node for AffineNode {
+    fn f(&self, x: f64) -> f64 {
         x
     }
 
@@ -154,10 +193,10 @@ impl Model {
 #[test]
 fn test() {
     let mut mdl = Model {
-        obs: Observation { ord_in: vec![vec![-57.4], vec![7.3], vec![20.], vec![38.], vec![78.]], ord_out: vec![4.1, 5.09, 5.44, 5.72, 6.39] },
+        obs: Observation { ord_in: vec![vec![10.], vec![20.], vec![25.], vec![30.]], ord_out: vec![22.5, 46.5, 61.1, 70.] },
         inputs: 1,
         layers: vec![vec![Box::new(LinearNode {
-            w: vec![0.001],
+            w: vec![1.],
             b: 0.,
             needed: 1
         })]],
@@ -166,5 +205,5 @@ fn test() {
     };
     mdl.train(100000); // train 100,000 iterations
     let wbs = mdl.get_wb();
-    println!("The Princess's Guess: {:?}x + {:?}", wbs[0], wbs[1]);
+    println!("The Prizen's Guess: {:?}x + {:?}", wbs[0], wbs[1]);
 }
