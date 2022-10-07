@@ -58,28 +58,30 @@ fn create_byte_vec<T: AsRef<Path>>(p: T) -> Vec<u8> {
     // Parsing layers
     fnal.append(&mut (layers.len() as f32).to_be_bytes().to_vec()); // adds number of layers bytes
     for layer in layers.iter() {
-        fnal.push(NEW_LAYER);
-        fnal.append(&mut (layers.len() as f32).to_be_bytes().to_vec());
+        fnal.push(NEW_LAYER); // NEW_LAYER
+        fnal.append(&mut (layers.len() as f32).to_be_bytes().to_vec()); // number_of_layers
         for node in layer {
-            fnal.push(NEW_NODE);
+            fnal.push(NEW_NODE); // NEW_NODE
             let n = node.replace("[", "").replace("]", "");
-            let els  = node.split_whitespace().collect::<Vec<&str>>();
+            let els  = n.split_whitespace().collect::<Vec<&str>>();
             let first = els[0];
             fnal.push(match first.to_lowercase().as_str() {
                 "linearnode" => LINEAR_F,
                 "affinenode" => AFFINE_F,
                 _ => panic!("Invalid node name {}", layer[0])
-            });
+            }); // node_type
             let second = els[1].parse::<f32>().unwrap();
-            fnal.append(&mut second.to_be_bytes().to_vec());
             let weights = &els[2..];
+            fnal.append(&mut (weights.len() as f32).to_be_bytes().to_vec()); // number_of_weights
+            fnal.append(&mut second.to_be_bytes().to_vec()); // bias
             for x in weights {
-                //
+                println!("{}", x);
+                fnal.append(&mut x.parse::<f32>().unwrap().to_be_bytes().to_vec()); // weight
             }
         }
         
     }
-    //println!("{:?}", layers);
+    println!("{:?}", fnal);
     vec![]
 }
 

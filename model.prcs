@@ -1,6 +1,5 @@
 layer
 LinearNode 0 [0.1]
-LinearNode 0 [0.1]
 meta
 input 1
 cst mse
