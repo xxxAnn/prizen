@@ -3,14 +3,5 @@
 version = 3
 
 [[package]]
-name = "finitediff"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e29b3f2b07b398985f495a66466e0a1fd105e022c25e1fd7042b60402cba765a"
-
-[[package]]
 name = "prizen"
 version = "0.1.0"
-dependencies = [
- "finitediff",
-]
