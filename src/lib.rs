@@ -32,7 +32,7 @@ pub trait Node {
     fn weights(&self) -> Vec<f64>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LinearNode {
     w: Vec<f64>,
     b: f64,
@@ -71,7 +71,7 @@ impl Node for LinearNode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AffineNode {
     w: Vec<f64>,
     b: f64,

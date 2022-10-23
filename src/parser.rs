@@ -1,21 +1,13 @@
 use std::{fs::{File, self}, path::Path, io::Read, io::Write};
 
+use crate::{LinearNode, AffineNode, Node};
+
 const NEW_LAYER: u8 = 0b00000001;
 const NEW_NODE:  u8 = 0b00000010;
 const META:      u8 = 0b00000011;
 
 const LINEAR_F:  u8 = 0b00000001;
 const AFFINE_F:  u8 = 0b00000010;
-
-
-// Byte Structure
-// (The lines are for clarity)
-// number_of_layers
-// (NEW_LAYER number_of_nodes (NEW_NODE node_type number_of_weights bias (weight)*number_of_weights)*number_of_nodes)*number_of_layers
-// META number_of_input_nodes cst_size cst alpha
-// EXP number_of_points ((value)*number_of_input_nodes)*number_of_points (value)*number_of_points
-// all vars are float: [u8; 4]
-// (x)*b means (x, x, x, ...) b times.
 
 // Structure
 // layer
@@ -29,7 +21,6 @@ const AFFINE_F:  u8 = 0b00000010;
 fn create_byte_vec<T: AsRef<Path>>(p: T) -> Vec<u8> {
     let f = fs::read_to_string(p).expect("Couldn't read file");
     let lines = f.lines().into_iter().rev().collect::<Vec<&str>>();
-    let mut fnal: Vec<u8> = Vec::new();
     let mut meta = Vec::new();
     let mut layers = Vec::new();
     let mut current_value = Vec::new();
@@ -56,32 +47,31 @@ fn create_byte_vec<T: AsRef<Path>>(p: T) -> Vec<u8> {
     layers.reverse();
     println!("{:?} \n {:?}", meta, layers);
     // Parsing layers
-    fnal.append(&mut (layers.len() as f32).to_be_bytes().to_vec()); // adds number of layers bytes
+    let mut r = Vec::new();
     for layer in layers.iter() {
-        fnal.push(NEW_LAYER); // NEW_LAYER
-        fnal.append(&mut (layers.len() as f32).to_be_bytes().to_vec()); // number_of_layers
+        let mut ls = Vec::new();
         for node in layer {
-            fnal.push(NEW_NODE); // NEW_NODE
             let n = node.replace("[", "").replace("]", "");
             let els  = n.split_whitespace().collect::<Vec<&str>>();
             let first = els[0];
-            fnal.push(match first.to_lowercase().as_str() {
-                "linearnode" => LINEAR_F,
-                "affinenode" => AFFINE_F,
-                _ => panic!("Invalid node name {}", layer[0])
-            }); // node_type
-            let second = els[1].parse::<f32>().unwrap();
+            
+            let b = els[1].parse::<f64>().unwrap();
             let weights = &els[2..];
-            fnal.append(&mut (weights.len() as f32).to_be_bytes().to_vec()); // number_of_weights
-            fnal.append(&mut second.to_be_bytes().to_vec()); // bias
+            let mut w = Vec::new();
             for x in weights {
-                println!("{}", x);
-                fnal.append(&mut x.parse::<f32>().unwrap().to_be_bytes().to_vec()); // weight
+                w.push(x.parse::<f64>().unwrap());
             }
+
+            let t: Box<dyn Node> = match first.to_lowercase().as_str() {
+                "linearnode" => Box::new(LinearNode { w, b, needed: weights.len()}),
+                "affinenode" => Box::new(AffineNode { w, b, needed: weights.len()}),
+                _ => panic!("Invalid node name {}", layer[0])
+            };
+            ls.push(t);
         }
+        r.push(ls)
         
     }
-    println!("{:?}", fnal);
     vec![]
 }
 
