@@ -1,3 +1,7 @@
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+use bincode;
+
 type Var = Vec<f64>;
 type SVar<'a> = &'a [f64];
 
@@ -114,17 +118,18 @@ impl Node for AffineNode {
 // Represents a real experimental value.
 // ord_in: ordered inputs (in node order).
 // ord_out: ordered outputs (in node order).
+#[derive(Serialize, Deserialize)]
 pub struct Observation {
     ord_in: Vec<Var>,
     ord_out: Vec<f64>
 }
 
 pub struct Model {
-    obs: Observation,
-    inputs: usize,
-    layers: Vec<Vec<Box<dyn Node>>>,
-    alpha: f64,
-    cst: Box<dyn Fn(Vec<f64>, Vec<f64>) -> f64>
+    pub obs: Observation,
+    pub inputs: usize,
+    pub layers: Vec<Vec<Box<dyn Node>>>,
+    pub alpha: f64,
+    pub cst: Box<dyn Fn(Vec<f64>, Vec<f64>) -> f64>
 }
 
 pub fn mse(a: Vec<f64>, b: Vec<f64>) -> f64 {
