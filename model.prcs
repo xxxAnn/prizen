@@ -3,4 +3,4 @@ LinearNode 0 [0.1]
 meta
 input 1
 cst mse
-alpha 0.0001
+alpha 0.0000001

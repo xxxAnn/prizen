@@ -121,7 +121,7 @@ impl Node for AffineNode {
 #[derive(Serialize, Deserialize)]
 pub struct Observation {
     ord_in: Vec<Var>,
-    ord_out: Vec<f64>
+    ord_out: Vec<Var>
 }
 
 pub struct Model {
@@ -129,27 +129,34 @@ pub struct Model {
     pub inputs: usize,
     pub layers: Vec<Vec<Box<dyn Node>>>,
     pub alpha: f64,
-    pub cst: Box<dyn Fn(Vec<f64>, Vec<f64>) -> f64>
+    pub cst: Box<dyn Fn(Vec<Vec<f64>>, Vec<Vec<f64>>) -> f64>
 }
 
-pub fn mse(a: Vec<f64>, b: Vec<f64>) -> f64 {
-    let x =(0..a.len()).map(|i| {
-        (a[i]-b[i]).powi(2)
-    }).collect::<Vec<f64>>();
+pub fn mse(a: Vec<Var>, b: Vec<Var>) -> f64 {
+    let f = |c: &[f64], d: &[f64]| -> f64 {
+        let x: f64 = (0..c.len()).map(|i| {
+            (c[i]-d[i]).powi(2)
+        }).collect::<Vec<f64>>().iter().sum();
 
-    x.iter().sum()
+        x/(c.len() as f64)
+    };
+    let x: f64 =(0..a.len()).map(|i| {
+        (f(&a[i], &b[i])).powi(2)
+    }).collect::<Vec<f64>>().iter().sum();
+
+    x/(a.len() as f64)
 }
+
 
 impl Model {
-    // there is one output node.
-    pub fn calc(&self, v: &[f64]) -> f64 {
+    pub fn calc(&self, v: &[f64]) -> Vec<f64> {
         let mut prev = v.to_vec();
         for layer in self.layers.iter() {
             prev = (0..layer.len()).into_iter().map(|x| layer[x].get_value(&prev)).collect();
         }
-        prev[0]
+        prev
     }
-    pub fn loss(&self, is: &[Var], os: &[f64]) -> f64 {
+    pub fn loss(&self, is: &[Var], os: &[Var]) -> f64 {
         let f = &self.cst;
 
         f(is.into_iter().map(|x| self.calc(&x)).collect(), os.to_vec())
@@ -181,6 +188,7 @@ impl Model {
             t[i] = t[i]+h;
             self.update_wb(&t);
             let a = self.loss(&self.obs.ord_in,& self.obs.ord_out);
+            //println!("Loss: {:?}", &a);
             t[i] = t[i]-h;
             self.update_wb(&t);
             let b = self.loss(&self.obs.ord_in,&self.obs.ord_out);
@@ -192,6 +200,9 @@ impl Model {
         let mut n = 0;
         while n < iter {
             self.update_wbs();
+            if n % 1000 == 0 {
+                println!("{:?}x + {:?}", self.get_wb()[0], self.get_wb()[1]);
+            }
             n+=1;
         }
     }
@@ -200,7 +211,7 @@ impl Model {
 #[test]
 fn test() {
     let mut mdl = Model {
-        obs: Observation { ord_in: vec![vec![10.], vec![20.], vec![25.], vec![30.]], ord_out: vec![22.5, 46.5, 61.1, 70.] },
+        obs: Observation { ord_in: vec![vec![10.], vec![20.], vec![25.], vec![30.]], ord_out: vec![vec![22.5], vec![46.5], vec![61.1], vec![70.]] },
         inputs: 1,
         layers: vec![vec![Box::new(LinearNode {
             w: vec![1.],
